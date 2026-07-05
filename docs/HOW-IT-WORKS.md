@@ -87,8 +87,8 @@ secret check ran at import time, every service would be forced to set
 `YAPZEE_JWT_SECRET` just to import the config module, even services with no
 concept of a logged-in user. Making it lazy means only services that
 actually call `create_token` or `decode_token` need that env var set; the
-monorepo backend additionally calls `require_jwt_secret()` directly at
-startup (in `main.py`) so it fails fast at boot instead of on the first
+`yapzee-auth` service additionally calls `require_jwt_secret()` directly at
+startup (in its `main.py`) so it fails fast at boot instead of on the first
 login request.
 
 ## The lesson-parser story
