@@ -1,6 +1,6 @@
 [project]
 name = "yapzee-common"
-version = "0.1.0"
+version = "0.2.0"
 description = "Shared YapZee library: LLM provider routing, config, JWT helpers, lesson parsing"
 requires-python = ">=3.14"
 dependencies = [
@@ -9,6 +9,7 @@ dependencies = [
     "anthropic>=0.40",
     "google-genai>=0.3",
     "python-jose[cryptography]>=3.3",
+    "fastapi>=0.135",
 ]
 
 [dependency-groups]
