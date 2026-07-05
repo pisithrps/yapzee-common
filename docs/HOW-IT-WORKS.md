@@ -92,7 +92,8 @@ login request.
 
 ## The lesson-parser story
 
-YapZee's lessons are Pimsleur-style: a narrator prompts the learner to
+YapZee's lessons are Pimsleur-style (Pimsleur is the classic audio
+language-learning method built on prompt–pause–answer drills): a narrator prompts the learner to
 recall a word or phrase, there's a silence for the learner to think and
 speak, then the correct answer is read aloud. Lesson content is authored as
 Markdown with a `{{PAUSE}}` marker between the narrator's prompt and a line
@@ -101,7 +102,7 @@ data downstream consumers need:
 
 - `parse_to_segments` walks the transcript and emits an ordered list of
   `{"type": "speak", ...}` and `{"type": "pause", ...}` segments — this is
-  what feeds a text-to-speech pipeline that needs to know exactly when to
+  what feeds a TTS (text-to-speech) pipeline that needs to know exactly when to
   talk and when to go silent.
 - `parse_expected_answers` extracts just the prompt/answer pairs, for
   scoring what the learner said during a pause.
@@ -127,7 +128,7 @@ answer line entirely), so this pass normalizes all of those to a single
 `{{PAUSE}}` token before the rest of the parser runs. It also strips
 syllable-break hyphens (like `per-do-na`) out of `<es>` (Spanish) tags,
 since those hyphens are an authoring convention that would otherwise leak
-into the text-to-speech input and corrupt pronunciation.
+into the TTS input and corrupt pronunciation.
 
 ## Versioning and how consumers pick up changes
 
