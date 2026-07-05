@@ -10,13 +10,14 @@ JWTs (JSON Web Tokens) — were needed by more than one service. Rather than
 copy-pasting `llm.py` into every new service and letting the copies drift,
 that code now lives here once, and every service imports it.
 
-Today there is one real consumer: the monorepo backend (`yapzee/backend`).
-It used to have its own `app/config.py`, `app/llm.py`, and
-`app/lesson_parser.py`; those files were deleted and replaced with imports
-from `yapzee_common`. Future services (content generation, podcast
-rendering, a standalone auth service) are expected to depend on this
-library too, which is why it's versioned and distributed independently
-instead of living inside the monorepo.
+Today the consumers are the five sibling services — `yapzee-auth`,
+`yapzee-memory`, `yapzee-content`, `yapzee-podcast`, and `yapzee-voice`.
+The old monolith backend used to have its own `app/config.py`, `app/llm.py`,
+and `app/lesson_parser.py`; those files were deleted when the monolith was
+split, and each service now imports the equivalents from `yapzee_common`.
+The library is versioned and distributed independently (a `uv` git
+dependency) precisely so those independent repos can share it without
+copy-pasting or drift.
 
 ## The 30-second mental model
 

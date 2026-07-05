@@ -4,7 +4,7 @@ One streaming interface over five providers. User picks the model per generation
 
 ## LLM Rules
 
-**Files**: `yapzee_common.llm`, `yapzee_common.config` (model list) — moved out of the old monolith's `backend/app/` into the `yapzee-common` package (`github.com/pisithrps/yapzee-common`) as part of the microservices split; each service that needs it (today, `content`) consumes it as a uv git dependency.
+**Files**: `yapzee_common.llm`, `yapzee_common.config` (model list) — moved out of the old monolith's `backend/app/` into the `yapzee-common` package (`github.com/pisithrps/yapzee-common`) as part of the microservices split; each service that needs it (all five sibling services) consumes it as a uv git dependency.
 **Never**: Call a provider SDK from a router — go through `stream_llm()`. Add a provider without adding it to `yapzee_common.config` and `GET /models`. Hard-code model IDs in routers.
 **Always**: Add a provider by adding a new branch in `stream_llm()` — don't modify existing branches. Keep temperature 0.6 for content; 1.0 is only for the voice agent (which bypasses `yapzee_common.llm`).
 **Verify**: `GET /models` lists the new provider and a test generation streams successfully.
