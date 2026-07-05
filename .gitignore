@@ -1,5 +1,2 @@
-.venv/
-__pycache__/
-*.pyc
-.pytest_cache/
-uv.lock
+node_modules/
+*.tsbuildinfo

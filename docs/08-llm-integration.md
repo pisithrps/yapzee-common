@@ -4,9 +4,9 @@ One streaming interface over five providers. User picks the model per generation
 
 ## LLM Rules
 
-**Files**: `yapzee_common.llm`, `yapzee_common.config` (model list) — moved out of the old monolith's `backend/app/` into the `yapzee-common` package (`github.com/pisithrps/yapzee-common`) as part of the microservices split; each service that needs it (all five sibling services) consumes it as a uv git dependency.
-**Never**: Call a provider SDK from a router — go through `stream_llm()`. Add a provider without adding it to `yapzee_common.config` and `GET /models`. Hard-code model IDs in routers.
-**Always**: Add a provider by adding a new branch in `stream_llm()` — don't modify existing branches. Keep temperature 0.6 for content; 1.0 is only for the voice agent (which bypasses `yapzee_common.llm`).
+**Files**: `src/llm.ts`, `src/config.ts` (model list) — TypeScript port (SD-06) of the original Python `yapzee_common.llm`/`.config`; each Bun service that needs it consumes this package as a git dependency.
+**Never**: Call a provider SDK from a router — go through `streamLlm()`. Add a provider without adding it to `MODELS` in `src/config.ts` and `GET /models`. Hard-code model IDs in routers.
+**Always**: Add a provider by adding a new branch in `streamLlm()` — don't modify existing branches. Keep temperature 0.6 for content; 1.0 is only for the voice agent (which bypasses `yapzee-common`'s `llm.ts`).
 **Verify**: `GET /models` lists the new provider and a test generation streams successfully.
 
 ---
@@ -25,15 +25,15 @@ Model list lives in `yapzee_common.config`; served to the frontend via `GET /mod
 
 ## Routing
 
-`stream_llm()` branches on `model_info["provider"]`:
+`streamLlm()` branches on `modelInfo.provider`:
 
 | Provider | SDK | Notes |
 |----------|-----|-------|
-| `gemini` | `google-genai` | `generate_content_stream()`, yields text chunks |
-| `anthropic` | `anthropic` | `.messages.stream()` context manager, yields `text_delta` |
-| `openai` | `openai` | `chat.completions.create(stream=True)`, yields `delta.content` |
-| `xai` | `openai` with `base_url="https://api.x.ai/v1"` | OpenAI-compatible |
-| `openrouter` | `openai` with `base_url="https://openrouter.ai/api/v1"` | Uses `extra_body={"provider": {"order": ["DeepInfra"]}}` to pin inference |
+| `gemini` | `@google/genai` | `generateContentStream()`, yields text chunks |
+| `anthropic` | `@anthropic-ai/sdk` | `.messages.stream()` async iterator, yields `text_delta` events |
+| `openai` | `openai` | `chat.completions.create({stream: true})`, yields `delta.content` |
+| `xai` | `openai` with `baseURL="https://api.x.ai/v1"` | OpenAI-compatible |
+| `openrouter` | `openai` with `baseURL="https://openrouter.ai/api/v1"` | Body extended with `{provider: {order: ["DeepInfra"]}}` to pin inference |
 
 ## Generation parameters
 
@@ -46,17 +46,18 @@ Voice agent uses 1.0 and bypasses this module.
 
 ## Streaming
 
-All generation endpoints return `text/event-stream`. Flow:
+`streamLlm()` is an `AsyncGenerator<string>`. All generation endpoints return
+`text/event-stream`. Flow:
 
 1. Frontend POSTs generation params.
-2. Backend opens a streaming LLM call inside `StreamingResponse`.
+2. Backend consumes `streamLlm()` inside a Hono SSE response.
 3. Each chunk yielded as an SSE event.
 4. Frontend appends to a textarea in real time.
 5. On stream end, backend concatenates and saves to disk.
 
 ## Environment
 
-Loaded by `Settings` in `yapzee_common.config`:
+Read lazily (at property-access time) by `settings` in `src/config.ts`:
 
 ```
 OPENAI_API_KEY

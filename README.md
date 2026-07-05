@@ -1,52 +1,50 @@
 # yapzee-common
 
-The shared Python library for YapZee services: one place for the code every
-service needs — LLM (large language model) provider routing, environment
-config, JWT (JSON Web Token) helpers, and the lesson-transcript parser.
-Services install it straight from GitHub as a `uv` git dependency; there is
-no PyPI publish step.
+The shared TypeScript library for YapZee services, running on **Bun**: one
+place for the code every service needs — LLM (large language model)
+provider routing, environment config, JWT (JSON Web Token) helpers, internal
+service-to-service auth, and the lesson-transcript parser.
+
+This is a straight TypeScript port of the original Python library (see
+`yapzee-docs/docs/SD-06-typescript-bun-migration.md`). Services on the new
+Bun stack install it as a git dependency; there is no npm-registry publish
+step. Python consumers of the old library are unaffected — they pin this
+repo by commit SHA in their own lockfiles and stay on their pre-migration
+commit.
 
 ## Where it sits
 
 ```mermaid
 flowchart LR
-    auth[yapzee-auth] --> common[yapzee_common]
+    auth[yapzee-auth] --> common[yapzee-common]
     memory[yapzee-memory] --> common
     content[yapzee-content] --> common
     podcast[yapzee-podcast] --> common
     voice[yapzee-voice] --> common
-    common --> llm[yapzee_common.llm]
+    common --> llm[llm.ts]
     llm --> apis["OpenAI / Anthropic / Gemini / xAI / OpenRouter APIs"]
 ```
-
-The monolith backend this library was carved out of is gone. The 5 sibling
-services — yapzee-auth, yapzee-memory, yapzee-content, yapzee-podcast,
-yapzee-voice — are the consumers today, each installing this package as a
-`uv` git dependency in place of its own local `app/config.py`, `app/llm.py`,
-`app/auth.py`, and `app/lesson_parser.py`.
 
 **New here? Read [`docs/HOW-IT-WORKS.md`](docs/HOW-IT-WORKS.md) top to bottom (5 min).**
 
 ## Quickstart (as a consumer)
 
-1. In your service's `pyproject.toml`, add `"yapzee-common"` to
-   `dependencies` and point `[tool.uv.sources]` at the git repo:
-   ```toml
-   [tool.uv.sources]
-   yapzee-common = { git = "https://github.com/pisithrps/yapzee-common.git" }
+1. In your service's `package.json`, add a git dependency:
+   ```json
+   "yapzee-common": "github:pisithrps/yapzee-common"
    ```
-2. `uv lock && uv sync`
-3. `from yapzee_common.llm import stream_llm`
+2. `bun install`
+3. `import { streamLlm } from "yapzee-common";`
 
 ## Modules
 
 | Module | Exports | Purpose |
 |---|---|---|
-| `yapzee_common.config` | `settings`, `MODELS`, `JWT_ALGORITHM`, `JWT_SECRET`, `JWT_TTL_DAYS` | env-based API keys + the shared model menu |
-| `yapzee_common.llm` | `stream_llm(prompt, model_info)` | one streaming entry point for OpenAI / Anthropic / Gemini / xAI / OpenRouter |
-| `yapzee_common.auth` | `create_token`, `decode_token`, `require_jwt_secret` | HS256 JWT mint/verify shared by all services |
-| `yapzee_common.internal_auth` | `require_internal_key` | FastAPI dependency gating service-to-service endpoints behind the `X-Internal-Key` header (`INTERNAL_API_KEY` env) |
-| `yapzee_common.lesson_parser` | `parse_to_segments`, `parse_expected_answers`, `estimate_timestamps`, `calculate_pause_duration`, `strip_to_spoken_script`, `CHARS_PER_SECOND`, `ES_TAG_RE`, `ELLIPSIS_RE`, `clean_spoken_text`, `find_answer_text`, `is_skippable` | parse lesson markdown into speak/pause segments, timestamps, and pause durations; shared TTS duration-estimation constants/regexes |
+| `src/config.ts` | `settings`, `MODELS`, `ModelInfo` | env-based API keys + the shared model menu (lazy — reads `process.env` at access time) |
+| `src/llm.ts` | `streamLlm(prompt, modelInfo)` | one async-generator streaming entry point for OpenAI / Anthropic / Gemini / xAI / OpenRouter |
+| `src/auth.ts` | `createToken`, `decodeToken`, `requireJwtSecret` | HS256 JWT mint/verify (via `jose`) shared by all services |
+| `src/internalAuth.ts` | `requireInternalKey`, `checkInternalKey` | Hono middleware (+ pure fn) gating service-to-service endpoints behind the `X-Internal-Key` header (`INTERNAL_API_KEY` env) |
+| `src/lessonParser.ts` | `parseToSegments`, `parseExpectedAnswers`, `estimateTimestamps`, `calculatePauseDuration`, `stripToSpokenScript`, `CHARS_PER_SECOND`, `ES_TAG_RE`, `ELLIPSIS_RE`, `cleanSpokenText`, `findAnswerText`, `isSkippable`, `normalizePauses` | parse lesson markdown into speak/pause segments, timestamps, and pause durations |
 
 ## Environment variables
 
@@ -61,10 +59,10 @@ yapzee-voice — are the consumers today, each installing this package as a
 | `AZURE_SPEECH_REGION` | If your service does TTS | Azure Speech region |
 | `YAPZEE_JWT_SECRET` | Only if you call an `auth` function | HS256 signing secret for JWTs |
 | `YAPZEE_JWT_TTL_DAYS` | No (default `30`) | JWT expiry window in days |
-| `INTERNAL_API_KEY` | Only if you call `internal_auth.require_internal_key` | shared secret checked against the `X-Internal-Key` header |
+| `INTERNAL_API_KEY` | Only if you call `internalAuth.requireInternalKey` | shared secret checked against the `X-Internal-Key` header |
 
 ## Developing
 
-`uv run --group dev pytest -q` — 15 tests. To ship a change to consumers:
-commit, push, then in each consumer run
-`uv lock --upgrade-package yapzee-common && uv sync`.
+`bun install && bun test` — runs the full suite. `bun run typecheck` runs
+`tsc --noEmit`. To ship a change to consumers: commit, push, then in each
+consumer run `bun update yapzee-common`.
