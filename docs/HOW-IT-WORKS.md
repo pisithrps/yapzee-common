@@ -5,7 +5,7 @@
 `yapzee-common` is a small TypeScript library, running on Bun, shared across
 YapZee's services. YapZee started as one monolith backend, was carved into
 microservices (originally Python/FastAPI), and is now being ported service by
-service to TypeScript on Bun (see `yapzee-docs/docs/SD-06-typescript-bun-migration.md`).
+service to TypeScript on Bun (see `yapzee-docs's ARCHITECTURE.md`).
 This library is first in that migration order because every service depends
 on it: talking to LLM (large language model) providers, reading environment
 config, minting/checking JWTs (JSON Web Tokens), gating internal endpoints,

@@ -6,7 +6,7 @@ provider routing, environment config, JWT (JSON Web Token) helpers, internal
 service-to-service auth, and the lesson-transcript parser.
 
 This is a straight TypeScript port of the original Python library (see
-`yapzee-docs/docs/SD-06-typescript-bun-migration.md`). Services on the new
+`yapzee-docs's ARCHITECTURE.md`). Services on the new
 Bun stack install it as a git dependency; there is no npm-registry publish
 step. Python consumers of the old library are unaffected — they pin this
 repo by commit SHA in their own lockfiles and stay on their pre-migration
