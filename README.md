@@ -40,7 +40,7 @@ with this package.
 | `yapzee_common.config` | `settings`, `MODELS`, `JWT_ALGORITHM`, `JWT_SECRET`, `JWT_TTL_DAYS` | env-based API keys + the shared model menu |
 | `yapzee_common.llm` | `stream_llm(prompt, model_info)` | one streaming entry point for OpenAI / Anthropic / Gemini / xAI / OpenRouter |
 | `yapzee_common.auth` | `create_token`, `decode_token`, `require_jwt_secret` | HS256 JWT mint/verify shared by all services |
-| `yapzee_common.lesson_parser` | `parse_to_segments`, `parse_expected_answers`, `estimate_timestamps`, `calculate_pause_duration`, `strip_to_spoken_script` | parse lesson markdown into speak/pause segments, timestamps, and pause durations |
+| `yapzee_common.lesson_parser` | `parse_to_segments`, `parse_expected_answers`, `estimate_timestamps`, `calculate_pause_duration`, `strip_to_spoken_script`, `CHARS_PER_SECOND`, `ES_TAG_RE`, `ELLIPSIS_RE`, `clean_spoken_text`, `find_answer_text`, `is_skippable` | parse lesson markdown into speak/pause segments, timestamps, and pause durations; shared TTS duration-estimation constants/regexes |
 
 ## Environment variables
 
@@ -58,6 +58,6 @@ with this package.
 
 ## Developing
 
-`uv run --group dev pytest -q` — 8 tests. To ship a change to consumers:
+`uv run --group dev pytest -q` — 11 tests. To ship a change to consumers:
 commit, push, then in each consumer run
 `uv lock --upgrade-package yapzee-common && uv sync`.

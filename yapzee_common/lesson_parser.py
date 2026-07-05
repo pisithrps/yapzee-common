@@ -1,13 +1,21 @@
 """Shared lesson transcript parsing utilities.
 
-Used by both the LiveKit voice agent and the podcast router to extract
+Used by the lesson/content pipeline and the podcast TTS pipeline to extract
 expected answers and timing information from lesson markdown files.
 """
 
 import re
 
+# Approximate speaking rate: ~150 words per minute → 2.5 words/sec.
+# Average word length ~5 chars + space → ~15 chars/sec.
+# Mirrors the backend's ssml_builder._CHARS_PER_SECOND (Azure TTS rate).
+CHARS_PER_SECOND = 15
 
-def _clean_spoken_text(text: str) -> str:
+ES_TAG_RE = re.compile(r"<es>(.*?)</es>", re.DOTALL)
+ELLIPSIS_RE = re.compile(r'^[\s.…]+$')
+
+
+def clean_spoken_text(text: str) -> str:
     """Clean a line of lesson text into speakable prose."""
     # Strip speaker labels but keep the text
     text = re.sub(r"^\[.*?\]\s*", "", text)
@@ -19,7 +27,7 @@ def _clean_spoken_text(text: str) -> str:
     return text
 
 
-def _is_skippable(stripped: str) -> bool:
+def is_skippable(stripped: str) -> bool:
     """Check if a line is non-spoken content that should be skipped."""
     if not stripped:
         return True
@@ -77,13 +85,19 @@ def _normalize_pauses(content: str) -> str:
     return "\n".join(result)
 
 
-def _find_answer_text(lines: list[str], pause_index: int) -> str | None:
+def find_answer_text(lines: list[str], pause_index: int) -> str | None:
     """Find the answer text in the -- Answer: ... -- line after a {{PAUSE}}."""
     for j in range(pause_index + 1, min(pause_index + 5, len(lines))):
         match = re.match(r"^--\s*Answer:\s*(.+?)\s*--\s*$", lines[j].strip())
         if match:
             return match.group(1).strip()
     return None
+
+
+# Underscore aliases preserved for one release so mid-bump consumers don't break.
+_clean_spoken_text = clean_spoken_text
+_find_answer_text = find_answer_text
+_is_skippable = is_skippable
 
 
 def calculate_pause_duration(answer_text: str) -> float:
@@ -116,7 +130,7 @@ def parse_to_segments(lesson_content: str) -> list[dict]:
         stripped = lines[i].strip()
 
         if "{{PAUSE}}" in stripped:
-            answer_text = _find_answer_text(lines, i)
+            answer_text = find_answer_text(lines, i)
 
             if answer_text:
                 duration = calculate_pause_duration(answer_text)
@@ -131,12 +145,12 @@ def parse_to_segments(lesson_content: str) -> list[dict]:
             i += 1
             continue
 
-        if _is_skippable(stripped):
+        if is_skippable(stripped):
             i += 1
             continue
 
         # Spoken line — clean and add as speak segment
-        spoken = _clean_spoken_text(stripped)
+        spoken = clean_spoken_text(stripped)
         if spoken:
             segments.append({"type": "speak", "text": spoken})
 
@@ -155,7 +169,7 @@ def parse_expected_answers(lesson_content: str) -> list[dict]:
     lines = _normalize_pauses(lesson_content).split("\n")
     for i, line in enumerate(lines):
         if "{{PAUSE}}" in line:
-            answer_text = _find_answer_text(lines, i)
+            answer_text = find_answer_text(lines, i)
             if answer_text:
                 # Get the prompt (narrator text before the PAUSE)
                 prompt = ""
@@ -198,7 +212,7 @@ def estimate_timestamps(lesson_content: str, chars_per_second: float = 15.0) -> 
                 "estimated_seconds": round(cumulative_seconds, 1),
             })
 
-            answer_text = _find_answer_text(lines, i)
+            answer_text = find_answer_text(lines, i)
             if answer_text:
                 pause_duration = calculate_pause_duration(answer_text)
                 answer_speaking_time = len(answer_text) / chars_per_second
@@ -207,11 +221,11 @@ def estimate_timestamps(lesson_content: str, chars_per_second: float = 15.0) -> 
                 cumulative_seconds += 3.0  # default pause
 
             turn_index += 1
-        elif _is_skippable(stripped):
+        elif is_skippable(stripped):
             continue
         else:
             # Count spoken characters
-            spoken = _clean_spoken_text(stripped)
+            spoken = clean_spoken_text(stripped)
             cumulative_seconds += len(spoken) / chars_per_second
 
     return timestamps
@@ -232,9 +246,9 @@ def strip_to_spoken_script(lesson_content: str) -> str:
 
     for line in lines:
         stripped = line.strip()
-        if _is_skippable(stripped):
+        if is_skippable(stripped):
             continue
-        spoken = _clean_spoken_text(stripped)
+        spoken = clean_spoken_text(stripped)
         if spoken:
             spoken_lines.append(spoken)
 
