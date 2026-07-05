@@ -10,15 +10,20 @@ no PyPI publish step.
 
 ```mermaid
 flowchart LR
-    backend[yapzee-backend] --> common[yapzee_common]
-    future["future services\n(yapzee-content / yapzee-podcast / yapzee-auth)"] -.-> common
+    auth[yapzee-auth] --> common[yapzee_common]
+    memory[yapzee-memory] --> common
+    content[yapzee-content] --> common
+    podcast[yapzee-podcast] --> common
+    voice[yapzee-voice] --> common
     common --> llm[yapzee_common.llm]
     llm --> apis["OpenAI / Anthropic / Gemini / xAI / OpenRouter APIs"]
 ```
 
-Today the monorepo backend (`yapzee/backend`) is the only consumer. It
-replaced its local `app/config.py`, `app/llm.py`, and `app/lesson_parser.py`
-with this package.
+The monolith backend this library was carved out of is gone. The 5 sibling
+services — yapzee-auth, yapzee-memory, yapzee-content, yapzee-podcast,
+yapzee-voice — are the consumers today, each installing this package as a
+`uv` git dependency in place of its own local `app/config.py`, `app/llm.py`,
+`app/auth.py`, and `app/lesson_parser.py`.
 
 **New here? Read [`docs/HOW-IT-WORKS.md`](docs/HOW-IT-WORKS.md) top to bottom (5 min).**
 
@@ -40,6 +45,7 @@ with this package.
 | `yapzee_common.config` | `settings`, `MODELS`, `JWT_ALGORITHM`, `JWT_SECRET`, `JWT_TTL_DAYS` | env-based API keys + the shared model menu |
 | `yapzee_common.llm` | `stream_llm(prompt, model_info)` | one streaming entry point for OpenAI / Anthropic / Gemini / xAI / OpenRouter |
 | `yapzee_common.auth` | `create_token`, `decode_token`, `require_jwt_secret` | HS256 JWT mint/verify shared by all services |
+| `yapzee_common.internal_auth` | `require_internal_key` | FastAPI dependency gating service-to-service endpoints behind the `X-Internal-Key` header (`INTERNAL_API_KEY` env) |
 | `yapzee_common.lesson_parser` | `parse_to_segments`, `parse_expected_answers`, `estimate_timestamps`, `calculate_pause_duration`, `strip_to_spoken_script`, `CHARS_PER_SECOND`, `ES_TAG_RE`, `ELLIPSIS_RE`, `clean_spoken_text`, `find_answer_text`, `is_skippable` | parse lesson markdown into speak/pause segments, timestamps, and pause durations; shared TTS duration-estimation constants/regexes |
 
 ## Environment variables
@@ -55,9 +61,10 @@ with this package.
 | `AZURE_SPEECH_REGION` | If your service does TTS | Azure Speech region |
 | `YAPZEE_JWT_SECRET` | Only if you call an `auth` function | HS256 signing secret for JWTs |
 | `YAPZEE_JWT_TTL_DAYS` | No (default `30`) | JWT expiry window in days |
+| `INTERNAL_API_KEY` | Only if you call `internal_auth.require_internal_key` | shared secret checked against the `X-Internal-Key` header |
 
 ## Developing
 
-`uv run --group dev pytest -q` — 11 tests. To ship a change to consumers:
+`uv run --group dev pytest -q` — 15 tests. To ship a change to consumers:
 commit, push, then in each consumer run
 `uv lock --upgrade-package yapzee-common && uv sync`.
