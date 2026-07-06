@@ -1,3 +1,5 @@
+> **⚠️ ARCHIVED** — this repo was consolidated into [pisithrps/yapzee](https://github.com/pisithrps/yapzee) (modular monolith). History preserved there via subtree. Archived 2026-07-06.
+
 # yapzee-common
 
 The shared TypeScript library for YapZee services, running on **Bun**: one
